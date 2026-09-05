@@ -1,0 +1,4 @@
+import { Request, Response } from 'express';
+export declare const getAnalytics: (req: Request, res: Response) => Promise<void>;
+export declare const getAIInsights: (req: Request, res: Response) => Promise<void>;
+//# sourceMappingURL=analytics.controller.d.ts.map
