@@ -58,11 +58,14 @@ export declare const createJobSchema: z.ZodObject<{
     experienceMax: z.ZodOptional<z.ZodNumber>;
     salaryMin: z.ZodOptional<z.ZodNumber>;
     salaryMax: z.ZodOptional<z.ZodNumber>;
+    minSalary: z.ZodOptional<z.ZodNumber>;
+    maxSalary: z.ZodOptional<z.ZodNumber>;
     salaryCurrency: z.ZodOptional<z.ZodString>;
+    currency: z.ZodOptional<z.ZodString>;
     description: z.ZodString;
-    requirements: z.ZodOptional<z.ZodString>;
-    responsibilities: z.ZodOptional<z.ZodString>;
-    benefits: z.ZodOptional<z.ZodString>;
+    requirements: z.ZodOptional<z.ZodUnion<[z.ZodString, z.ZodEffects<z.ZodArray<z.ZodString, "many">, string, string[]>]>>;
+    responsibilities: z.ZodOptional<z.ZodUnion<[z.ZodString, z.ZodEffects<z.ZodArray<z.ZodString, "many">, string, string[]>]>>;
+    benefits: z.ZodOptional<z.ZodUnion<[z.ZodString, z.ZodEffects<z.ZodArray<z.ZodString, "many">, string, string[]>]>>;
     openings: z.ZodDefault<z.ZodNumber>;
     status: z.ZodDefault<z.ZodOptional<z.ZodEnum<["DRAFT", "ACTIVE", "PAUSED", "CLOSED", "ARCHIVED"]>>>;
 }, "strip", z.ZodTypeAny, {
@@ -78,7 +81,10 @@ export declare const createJobSchema: z.ZodObject<{
     experienceMax?: number | undefined;
     salaryMin?: number | undefined;
     salaryMax?: number | undefined;
+    minSalary?: number | undefined;
+    maxSalary?: number | undefined;
     salaryCurrency?: string | undefined;
+    currency?: string | undefined;
     requirements?: string | undefined;
     responsibilities?: string | undefined;
     benefits?: string | undefined;
@@ -94,10 +100,13 @@ export declare const createJobSchema: z.ZodObject<{
     experienceMax?: number | undefined;
     salaryMin?: number | undefined;
     salaryMax?: number | undefined;
+    minSalary?: number | undefined;
+    maxSalary?: number | undefined;
     salaryCurrency?: string | undefined;
-    requirements?: string | undefined;
-    responsibilities?: string | undefined;
-    benefits?: string | undefined;
+    currency?: string | undefined;
+    requirements?: string | string[] | undefined;
+    responsibilities?: string | string[] | undefined;
+    benefits?: string | string[] | undefined;
     openings?: number | undefined;
 }>;
 export declare const updateJobSchema: z.ZodObject<{
@@ -110,11 +119,14 @@ export declare const updateJobSchema: z.ZodObject<{
     experienceMax: z.ZodOptional<z.ZodOptional<z.ZodNumber>>;
     salaryMin: z.ZodOptional<z.ZodOptional<z.ZodNumber>>;
     salaryMax: z.ZodOptional<z.ZodOptional<z.ZodNumber>>;
+    minSalary: z.ZodOptional<z.ZodOptional<z.ZodNumber>>;
+    maxSalary: z.ZodOptional<z.ZodOptional<z.ZodNumber>>;
     salaryCurrency: z.ZodOptional<z.ZodOptional<z.ZodString>>;
+    currency: z.ZodOptional<z.ZodOptional<z.ZodString>>;
     description: z.ZodOptional<z.ZodString>;
-    requirements: z.ZodOptional<z.ZodOptional<z.ZodString>>;
-    responsibilities: z.ZodOptional<z.ZodOptional<z.ZodString>>;
-    benefits: z.ZodOptional<z.ZodOptional<z.ZodString>>;
+    requirements: z.ZodOptional<z.ZodOptional<z.ZodUnion<[z.ZodString, z.ZodEffects<z.ZodArray<z.ZodString, "many">, string, string[]>]>>>;
+    responsibilities: z.ZodOptional<z.ZodOptional<z.ZodUnion<[z.ZodString, z.ZodEffects<z.ZodArray<z.ZodString, "many">, string, string[]>]>>>;
+    benefits: z.ZodOptional<z.ZodOptional<z.ZodUnion<[z.ZodString, z.ZodEffects<z.ZodArray<z.ZodString, "many">, string, string[]>]>>>;
     openings: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
     status: z.ZodOptional<z.ZodDefault<z.ZodOptional<z.ZodEnum<["DRAFT", "ACTIVE", "PAUSED", "CLOSED", "ARCHIVED"]>>>>;
 }, "strip", z.ZodTypeAny, {
@@ -128,7 +140,10 @@ export declare const updateJobSchema: z.ZodObject<{
     experienceMax?: number | undefined;
     salaryMin?: number | undefined;
     salaryMax?: number | undefined;
+    minSalary?: number | undefined;
+    maxSalary?: number | undefined;
     salaryCurrency?: string | undefined;
+    currency?: string | undefined;
     description?: string | undefined;
     requirements?: string | undefined;
     responsibilities?: string | undefined;
@@ -145,11 +160,14 @@ export declare const updateJobSchema: z.ZodObject<{
     experienceMax?: number | undefined;
     salaryMin?: number | undefined;
     salaryMax?: number | undefined;
+    minSalary?: number | undefined;
+    maxSalary?: number | undefined;
     salaryCurrency?: string | undefined;
+    currency?: string | undefined;
     description?: string | undefined;
-    requirements?: string | undefined;
-    responsibilities?: string | undefined;
-    benefits?: string | undefined;
+    requirements?: string | string[] | undefined;
+    responsibilities?: string | string[] | undefined;
+    benefits?: string | string[] | undefined;
     openings?: number | undefined;
 }>;
 export declare const updateCandidateSchema: z.ZodObject<{
@@ -212,13 +230,25 @@ export declare const savedSearchSchema: z.ZodObject<{
     name: string;
     filters: Record<string, unknown>;
 }>;
-export declare const analyzeJobSchema: z.ZodObject<{
+export declare const analyzeJobSchema: z.ZodUnion<[z.ZodObject<{
     jobId: z.ZodString;
+    description: z.ZodOptional<z.ZodString>;
 }, "strip", z.ZodTypeAny, {
     jobId: string;
+    description?: string | undefined;
 }, {
     jobId: string;
-}>;
+    description?: string | undefined;
+}>, z.ZodObject<{
+    description: z.ZodString;
+    jobId: z.ZodOptional<z.ZodString>;
+}, "strip", z.ZodTypeAny, {
+    description: string;
+    jobId?: string | undefined;
+}, {
+    description: string;
+    jobId?: string | undefined;
+}>]>;
 export declare const analyzeResumeSchema: z.ZodEffects<z.ZodObject<{
     resumeId: z.ZodOptional<z.ZodString>;
     text: z.ZodOptional<z.ZodString>;

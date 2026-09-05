@@ -1,4 +1,4 @@
-﻿import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import type { User } from '../types';
 import { api } from '../services/api';
 
@@ -7,14 +7,14 @@ interface AuthContextType {
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<User>;
   register: (data: {
     email: string;
     password: string;
     firstName: string;
     lastName: string;
     organizationName: string;
-  }) => Promise<void>;
+  }) => Promise<User>;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   completeOnboarding: () => Promise<void>;
@@ -53,7 +53,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     initAuth();
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string): Promise<User> => {
     setIsLoading(true);
     try {
       const res = await api.login({ email, password });
@@ -62,6 +62,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setUser(res.data.user);
         localStorage.setItem('token', res.data.token);
         localStorage.setItem('user', JSON.stringify(res.data.user));
+        return res.data.user;
       } else {
         throw new Error(res.message || 'Login failed');
       }
@@ -76,7 +77,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     firstName: string;
     lastName: string;
     organizationName: string;
-  }) => {
+  }): Promise<User> => {
     setIsLoading(true);
     try {
       const res = await api.register(data);
@@ -85,6 +86,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setUser(res.data.user);
         localStorage.setItem('token', res.data.token);
         localStorage.setItem('user', JSON.stringify(res.data.user));
+        return res.data.user;
       } else {
         throw new Error(res.message || 'Registration failed');
       }

@@ -12,10 +12,11 @@ exports.sendSuccess = sendSuccess;
 const sendError = (res, message, code = 'INTERNAL_ERROR', statusCode = 500, details) => {
     return res.status(statusCode).json({
         success: false,
+        message,
         error: {
             code,
             message,
-            ...(details && process.env.NODE_ENV === 'development' ? { details } : {}),
+            ...(details !== undefined ? { details } : {}),
         },
     });
 };

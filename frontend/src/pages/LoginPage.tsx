@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Sparkles, Lock, Mail, ArrowRight, ShieldCheck, UserCheck, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/Button';
+import { extractErrorMessage } from '../services/api';
 
 export const LoginPage: React.FC = () => {
   const { login } = useAuth();
@@ -23,10 +24,14 @@ export const LoginPage: React.FC = () => {
     setError(null);
     setIsLoading(true);
     try {
-      await login(email, password);
-      navigate('/dashboard');
+      const loggedInUser = await login(email, password);
+      if (loggedInUser && !loggedInUser.onboardingDone) {
+        navigate('/onboarding');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err: any) {
-      setError(err.response?.data?.message || err.message || 'Invalid email or password');
+      setError(extractErrorMessage(err, 'Invalid email or password'));
     } finally {
       setIsLoading(false);
     }

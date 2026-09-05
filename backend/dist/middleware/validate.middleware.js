@@ -10,7 +10,8 @@ const validate = (schema) => {
                 field: e.path.join('.'),
                 message: e.message,
             }));
-            (0, response_1.sendError)(res, 'Validation failed', 'VALIDATION_ERROR', 400, errors);
+            const summary = errors.map((e) => e.message).join('. ') || 'Validation failed';
+            (0, response_1.sendError)(res, summary, 'VALIDATION_ERROR', 400, errors);
             return;
         }
         req.body = result.data;
@@ -26,7 +27,8 @@ const validateQuery = (schema) => {
                 field: e.path.join('.'),
                 message: e.message,
             }));
-            (0, response_1.sendError)(res, 'Query validation failed', 'VALIDATION_ERROR', 400, errors);
+            const summary = errors.map((e) => e.message).join('. ') || 'Query validation failed';
+            (0, response_1.sendError)(res, summary, 'VALIDATION_ERROR', 400, errors);
             return;
         }
         req.query = result.data;

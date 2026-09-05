@@ -1,5 +1,5 @@
 import axios, { AxiosError } from 'axios';
-import type { Job, Candidate, User, AnalyticsData, NotificationItem, InterviewKit } from '../types';
+import type { Candidate, AnalyticsData } from '../types';
 
 export const apiClient = axios.create({
   baseURL: '/api',
@@ -33,6 +33,33 @@ apiClient.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+// Extract friendly error messages from API or network errors
+export function extractErrorMessage(err: unknown, fallback = 'An unexpected error occurred'): string {
+  if (err && typeof err === 'object') {
+    const anyErr = err as any;
+    if (anyErr.response?.data) {
+      const data = anyErr.response.data;
+      // 1. Check for field-level validation details
+      if (Array.isArray(data.error?.details) && data.error.details.length > 0) {
+        return data.error.details.map((d: any) => d.message || d).join('. ');
+      }
+      // 2. Check error.message
+      if (data.error?.message) {
+        return data.error.message;
+      }
+      // 3. Check top-level message
+      if (data.message) {
+        return data.message;
+      }
+    }
+    // 4. Standard error message, avoiding raw HTTP status codes
+    if (anyErr.message && typeof anyErr.message === 'string' && !anyErr.message.includes('Request failed with status code')) {
+      return anyErr.message;
+    }
+  }
+  return fallback;
+}
 
 export const api = {
   // Auth

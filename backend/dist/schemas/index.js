@@ -27,6 +27,13 @@ exports.resetPasswordSchema = zod_1.z.object({
         .string()
         .min(8, 'Password must be at least 8 characters'),
 });
+// Helper: coerce string[] → joined string, or pass through string as-is
+const textOrArray = zod_1.z
+    .union([
+    zod_1.z.string(),
+    zod_1.z.array(zod_1.z.string()).transform((arr) => arr.join('\n')),
+])
+    .optional();
 exports.createJobSchema = zod_1.z.object({
     title: zod_1.z.string().min(1, 'Job title is required').max(200),
     department: zod_1.z.string().optional(),
@@ -35,13 +42,18 @@ exports.createJobSchema = zod_1.z.object({
     employmentType: zod_1.z.enum(['FULL_TIME', 'PART_TIME', 'CONTRACT', 'INTERNSHIP']).optional(),
     experienceMin: zod_1.z.number().int().min(0).optional(),
     experienceMax: zod_1.z.number().int().min(0).optional(),
+    // Accept both salaryMin/salaryMax (frontend) and salaryMin/salaryMax (DB name) as well as minSalary/maxSalary
     salaryMin: zod_1.z.number().int().min(0).optional(),
     salaryMax: zod_1.z.number().int().min(0).optional(),
+    minSalary: zod_1.z.number().int().min(0).optional(),
+    maxSalary: zod_1.z.number().int().min(0).optional(),
     salaryCurrency: zod_1.z.string().optional(),
+    currency: zod_1.z.string().optional(),
     description: zod_1.z.string().min(10, 'Job description must be at least 10 characters'),
-    requirements: zod_1.z.string().optional(),
-    responsibilities: zod_1.z.string().optional(),
-    benefits: zod_1.z.string().optional(),
+    // Accept both string and string[] for requirements/responsibilities
+    requirements: textOrArray,
+    responsibilities: textOrArray,
+    benefits: textOrArray,
     openings: zod_1.z.number().int().min(1).default(1),
     status: zod_1.z.enum(['DRAFT', 'ACTIVE', 'PAUSED', 'CLOSED', 'ARCHIVED']).optional().default('DRAFT'),
 });
@@ -70,9 +82,17 @@ exports.savedSearchSchema = zod_1.z.object({
     name: zod_1.z.string().min(1).max(100),
     filters: zod_1.z.record(zod_1.z.unknown()),
 });
-exports.analyzeJobSchema = zod_1.z.object({
-    jobId: zod_1.z.string().uuid(),
-});
+// /jobs/analyze accepts either a jobId (analyze saved job) OR a raw description (pre-creation)
+exports.analyzeJobSchema = zod_1.z.union([
+    zod_1.z.object({
+        jobId: zod_1.z.string().uuid(),
+        description: zod_1.z.string().optional(),
+    }),
+    zod_1.z.object({
+        description: zod_1.z.string().min(10, 'Description must be at least 10 characters'),
+        jobId: zod_1.z.string().optional(),
+    }),
+]);
 exports.analyzeResumeSchema = zod_1.z.object({
     resumeId: zod_1.z.string().uuid().optional(),
     text: zod_1.z.string().optional(),

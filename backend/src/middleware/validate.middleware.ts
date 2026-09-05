@@ -10,7 +10,8 @@ export const validate = (schema: ZodSchema) => {
         field: e.path.join('.'),
         message: e.message,
       }));
-      sendError(res, 'Validation failed', 'VALIDATION_ERROR', 400, errors);
+      const summary = errors.map((e) => e.message).join('. ') || 'Validation failed';
+      sendError(res, summary, 'VALIDATION_ERROR', 400, errors);
       return;
     }
     req.body = result.data;
@@ -26,7 +27,8 @@ export const validateQuery = (schema: ZodSchema) => {
         field: e.path.join('.'),
         message: e.message,
       }));
-      sendError(res, 'Query validation failed', 'VALIDATION_ERROR', 400, errors);
+      const summary = errors.map((e) => e.message).join('. ') || 'Query validation failed';
+      sendError(res, summary, 'VALIDATION_ERROR', 400, errors);
       return;
     }
     req.query = result.data as Record<string, string>;

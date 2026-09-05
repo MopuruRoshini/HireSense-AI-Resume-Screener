@@ -77,24 +77,40 @@ exports.getJob = getJob;
 const createJob = async (req, res) => {
     const orgId = req.user.organizationId;
     if (!orgId) {
-        (0, response_1.sendError)(res, 'Organization required', 'ORG_REQUIRED', 400);
+        (0, response_1.sendError)(res, 'Organization required — user must belong to an organization', 'ORG_REQUIRED', 400);
         return;
     }
-    const { title, department, location, locationType, employmentType, experienceMin, experienceMax, salaryMin, salaryMax, salaryCurrency, description, requirements, responsibilities, benefits, openings, status } = req.body;
+    const body = req.body;
+    // Normalize salary field aliases: frontend may send minSalary/maxSalary/currency
+    // Backend DB uses salaryMin/salaryMax/salaryCurrency
+    const salaryMin = body.salaryMin ?? body.minSalary ?? undefined;
+    const salaryMax = body.salaryMax ?? body.maxSalary ?? undefined;
+    const salaryCurrency = body.salaryCurrency ?? body.currency ?? 'USD';
+    const { title, department, location, locationType, employmentType, experienceMin, experienceMax, description, requirements, responsibilities, benefits, openings, status, } = body;
     const job = await prisma_1.prisma.job.create({
         data: {
-            title, department, location, locationType, employmentType,
-            experienceMin, experienceMax, salaryMin, salaryMax,
-            salaryCurrency: salaryCurrency || 'USD', description,
-            requirements, responsibilities, benefits,
-            openings: openings || 1,
-            status: status || 'DRAFT',
+            title,
+            department,
+            location,
+            locationType,
+            employmentType,
+            experienceMin,
+            experienceMax,
+            salaryMin,
+            salaryMax,
+            salaryCurrency,
+            description,
+            requirements,
+            responsibilities,
+            benefits,
+            openings: openings ?? 1,
+            status: status ?? 'DRAFT',
             organizationId: orgId,
             createdById: req.user.userId,
         },
         include: { skills: true },
     });
-    // Trigger AI JD analysis in background
+    // Trigger AI JD analysis in background (non-blocking)
     analyzeJobInBackground(job.id, description).catch(() => { });
     await prisma_1.prisma.auditLog.create({
         data: { userId: req.user.userId, action: 'JOB_CREATED', entityType: 'JOB', entityId: job.id },
@@ -112,9 +128,21 @@ const updateJob = async (req, res) => {
         (0, response_1.sendError)(res, 'Job not found', 'NOT_FOUND', 404);
         return;
     }
+    const body = req.body;
+    // Normalize aliases on update too
+    const updateData = { ...body };
+    if (body.minSalary !== undefined && body.salaryMin === undefined)
+        updateData.salaryMin = body.minSalary;
+    if (body.maxSalary !== undefined && body.salaryMax === undefined)
+        updateData.salaryMax = body.maxSalary;
+    if (body.currency !== undefined && body.salaryCurrency === undefined)
+        updateData.salaryCurrency = body.currency;
+    delete updateData.minSalary;
+    delete updateData.maxSalary;
+    delete updateData.currency;
     const updated = await prisma_1.prisma.job.update({
         where: { id },
-        data: req.body,
+        data: updateData,
         include: { skills: true },
     });
     await prisma_1.prisma.auditLog.create({
@@ -138,32 +166,47 @@ const deleteJob = async (req, res) => {
 };
 exports.deleteJob = deleteJob;
 const analyzeJobDescription = async (req, res) => {
-    const { jobId } = req.body;
-    const job = await prisma_1.prisma.job.findUnique({ where: { id: jobId } });
-    if (!job) {
-        (0, response_1.sendError)(res, 'Job not found', 'NOT_FOUND', 404);
+    const { jobId, description: rawDescription } = req.body;
+    let descriptionToAnalyze;
+    if (jobId) {
+        // Analyze from a saved job record
+        const job = await prisma_1.prisma.job.findUnique({ where: { id: jobId } });
+        if (!job) {
+            (0, response_1.sendError)(res, 'Job not found', 'NOT_FOUND', 404);
+            return;
+        }
+        descriptionToAnalyze = job.description;
+    }
+    else if (rawDescription) {
+        // Analyze raw description text (pre-creation, used from the create modal)
+        descriptionToAnalyze = rawDescription;
+    }
+    else {
+        (0, response_1.sendError)(res, 'Provide either jobId or description', 'VALIDATION_ERROR', 400);
         return;
     }
     const ai = (0, ai_1.getAIProvider)();
-    const analysis = await ai.analyzeJobDescription(job.description);
-    // Store extracted skills
-    await prisma_1.prisma.jobSkill.deleteMany({ where: { jobId } });
-    if (analysis.requiredSkills.length > 0) {
-        await prisma_1.prisma.jobSkill.createMany({
-            data: analysis.requiredSkills.map((skill) => ({ jobId, skill, isRequired: true })),
-            skipDuplicates: true,
+    const analysis = await ai.analyzeJobDescription(descriptionToAnalyze);
+    // Only store extracted skills if we have a real job record
+    if (jobId) {
+        await prisma_1.prisma.jobSkill.deleteMany({ where: { jobId } });
+        if (analysis.requiredSkills.length > 0) {
+            await prisma_1.prisma.jobSkill.createMany({
+                data: analysis.requiredSkills.map((skill) => ({ jobId, skill, isRequired: true })),
+                skipDuplicates: true,
+            });
+        }
+        if (analysis.preferredSkills.length > 0) {
+            await prisma_1.prisma.jobSkill.createMany({
+                data: analysis.preferredSkills.map((skill) => ({ jobId, skill, isRequired: false })),
+                skipDuplicates: true,
+            });
+        }
+        await prisma_1.prisma.job.update({
+            where: { id: jobId },
+            data: { aiAnalyzed: true, aiSummary: analysis.summary, seniority: analysis.seniority, domain: analysis.domain },
         });
     }
-    if (analysis.preferredSkills.length > 0) {
-        await prisma_1.prisma.jobSkill.createMany({
-            data: analysis.preferredSkills.map((skill) => ({ jobId, skill, isRequired: false })),
-            skipDuplicates: true,
-        });
-    }
-    await prisma_1.prisma.job.update({
-        where: { id: jobId },
-        data: { aiAnalyzed: true, aiSummary: analysis.summary, seniority: analysis.seniority, domain: analysis.domain },
-    });
     (0, response_1.sendSuccess)(res, analysis, 'Job description analyzed successfully');
 };
 exports.analyzeJobDescription = analyzeJobDescription;

@@ -17,10 +17,11 @@ export const sendError = (
 ) => {
   return res.status(statusCode).json({
     success: false,
+    message,
     error: {
       code,
       message,
-      ...(details && process.env.NODE_ENV === 'development' ? { details } : {}),
+      ...(details !== undefined ? { details } : {}),
     },
   });
 };
